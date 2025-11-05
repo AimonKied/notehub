@@ -161,7 +161,7 @@ class NoteHub(QWidget):
         layout = QVBoxLayout()
 
         # ===== Terminal-like Command Line Section =====
-        terminal_label = QLabel("Kommandozeile (Bash-Look):")
+        terminal_label = QLabel("Command Line:")
         layout.addWidget(terminal_label)
 
         # Text area for terminal output (read-only, monospace font, dark theme)
@@ -213,10 +213,10 @@ class NoteHub(QWidget):
         layout.addLayout(cmd_layout)
 
         self.update_prompt()
-        self.append_terminal("Willkommen bei NoteHub! Gib 'help' ein, um alle Befehle zu sehen.\n")
+        self.append_terminal("Welcome to NoteHub! Type 'help' to see all commands.\n")
 
         # ===== Notes Section =====
-        notes_label = QLabel("Notizen:")
+        notes_label = QLabel("Notes:")
         layout.addWidget(notes_label)
 
         self.note_list = QListWidget()
@@ -228,15 +228,15 @@ class NoteHub(QWidget):
 
         button_layout = QHBoxLayout()
 
-        new_btn = QPushButton("Neue Notiz")
+        new_btn = QPushButton("New note")
         new_btn.clicked.connect(self.new_note)
         button_layout.addWidget(new_btn)
 
-        save_btn = QPushButton("Speichern")
+        save_btn = QPushButton("Save")
         save_btn.clicked.connect(self.save_note)
         button_layout.addWidget(save_btn)
 
-        delete_btn = QPushButton("Löschen")
+        delete_btn = QPushButton("Delete")
         delete_btn.clicked.connect(self.delete_note)
         button_layout.addWidget(delete_btn)
 
@@ -322,15 +322,15 @@ class NoteHub(QWidget):
                 self.text_area.setPlainText(f.read())
             self.current_note = name
         else:
-            QMessageBox.warning(self, "Fehler", f"Notiz '{name}' nicht gefunden!")
+            QMessageBox.warning(self, "Error", f"Note '{name}' not found!")
 
     def new_note(self):
-        name, ok = QInputDialog.getText(self, "Neue Notiz", "Titel der Notiz:")
+        name, ok = QInputDialog.getText(self, "New Note", "Note title:")
         if ok and name:
             # Use current directory from shell
             path = os.path.join(self.shell.cwd, f"{name}.txt")
             if os.path.exists(path):
-                QMessageBox.warning(self, "Fehler", "Diese Notiz existiert bereits!")
+                QMessageBox.warning(self, "Error", "This note already exists!")
                 return
             with open(path, "w", encoding="utf-8") as f:
                 f.write("")
@@ -344,9 +344,9 @@ class NoteHub(QWidget):
             os.makedirs(os.path.dirname(filepath), exist_ok=True)
             with open(filepath, "w", encoding="utf-8") as f:
                 f.write(self.text_area.toPlainText())
-            QMessageBox.information(self, "Gespeichert", f"'{self.current_note}' wurde gespeichert.")
+            QMessageBox.information(self, "Saved", f"'{self.current_note}' saved.")
         else:
-            QMessageBox.warning(self, "Keine Notiz", "Keine Notiz ausgewählt!")
+            QMessageBox.warning(self, "No Note", "No note selected!")
 
     def delete_note(self):
         if self.current_note:
@@ -382,12 +382,12 @@ class NoteHub(QWidget):
                 # Create new note
                 with open(filepath, "w", encoding="utf-8") as f:
                     f.write(content)
-                self.append_terminal(f"Notiz '{self.current_note}' erstellt.\n")
+                self.append_terminal(f"Note '{self.current_note}' created.\n")
             elif self.edit_mode_type == "edit":
                 # Update existing note
                 with open(filepath, "w", encoding="utf-8") as f:
                     f.write(content)
-                self.append_terminal(f"Notiz '{self.current_note}' gespeichert.\n")
+                self.append_terminal(f"Note '{self.current_note}' saved.\n")
             
             # Exit edit mode and return focus to command line
             self.text_area.edit_mode = False
@@ -395,7 +395,7 @@ class NoteHub(QWidget):
             self.refresh_notes()
             self.command_input.setFocus()
         except Exception as e:
-            self.append_terminal(f"Fehler: {str(e)}\n")
+            self.append_terminal(f"Error: {str(e)}\n")
 
     def execute_command(self):
         """Execute the command entered by the user."""
@@ -424,16 +424,16 @@ class NoteHub(QWidget):
                 note_title = cmd_parts[1]
                 filepath = os.path.join(self.shell.cwd, f"{note_title}.txt")
                 if os.path.exists(filepath):
-                    self.append_terminal(f"Notiz '{note_title}' existiert bereits. Verwende 'edit'.\n")
+                    self.append_terminal(f"Note '{note_title}' already exists. Use 'edit'.\n")
                 else:
                     self.current_note = note_title
                     self.edit_mode_type = "add"
                     self.text_area.clear()
                     self.text_area.edit_mode = True
                     self.text_area.setFocus()
-                    self.append_terminal(f"Editor aktiviert. Schreibe deine Notiz. Enter = Speichern, Shift+Enter = Neue Zeile.\n")
+                    self.append_terminal(f"Editor activated. Write your note. Enter = Save, Shift+Enter = New line.\n")
             else:
-                self.append_terminal("Benutzung: add <title>\n")
+                self.append_terminal("Usage: add <title>\n")
             self.command_input.clear()
             return
 
@@ -455,11 +455,11 @@ class NoteHub(QWidget):
                     cursor = self.text_area.textCursor()
                     cursor.movePosition(QTextCursor.MoveOperation.End)
                     self.text_area.setTextCursor(cursor)
-                    self.append_terminal(f"Editor aktiviert. Bearbeite deine Notiz. Enter = Speichern, Shift+Enter = Neue Zeile.\n")
+                    self.append_terminal(f"Editor activated. Edit your note. Enter = Save, Shift+Enter = New line.\n")
                 else:
-                    self.append_terminal(f"Notiz '{note_title}' nicht gefunden.\n")
+                    self.append_terminal(f"Note '{note_title}' not found.\n")
             else:
-                self.append_terminal("Benutzung: edit <title>\n")
+                self.append_terminal("Usage: edit <title>\n")
             self.command_input.clear()
             return
 
@@ -475,11 +475,11 @@ class NoteHub(QWidget):
                     self.text_area.setPlainText(content)
                     self.current_note = note_title
                     self.text_area.edit_mode = False
-                    self.append_terminal(f"Notiz '{note_title}' wird im Editor angezeigt.\n")
+                    self.append_terminal(f"Note '{note_title}' displayed in editor.\n")
                 else:
-                    self.append_terminal(f"Notiz '{note_title}' nicht gefunden.\n")
+                    self.append_terminal(f"Note '{note_title}' not found.\n")
             else:
-                self.append_terminal("Benutzung: show <title>\n")
+                self.append_terminal("Usage: show <title>\n")
             self.command_input.clear()
             return
 

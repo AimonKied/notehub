@@ -20,27 +20,27 @@ def add_note(title, content):
     filename = os.path.join(NOTES_DIR, f"{title}.txt")
     with open(filename, "w", encoding="utf-8") as f:
         f.write(content)
-    return f"Notiz '{title}' erstellt."
+    return f"Note '{title}' created."
 
 
 def remove_note(title):
     filename = os.path.join(NOTES_DIR, f"{title}.txt")
     if os.path.exists(filename):
         os.remove(filename)
-        return f"Notiz '{title}' gelöscht."
+        return f"Note '{title}' deleted."
     else:
-        return f"Notiz '{title}' nicht gefunden."
+        return f"Note '{title}' not found."
 
 
 def list_notes():
     ensure_notes_dir()
     notes = [f[:-4] for f in os.listdir(NOTES_DIR) if f.endswith(".txt")]
     if notes:
-        out = ["Vorhandene Notizen:"]
+        out = ["existing notes:"]
         out += [f" - {n}" for n in notes]
         return "\n".join(out)
     else:
-        return "Keine Notizen vorhanden."
+        return "No notes available."
 
 
 def mark_note_done(title):
@@ -53,11 +53,11 @@ def mark_note_done(title):
         if "[DONE]" not in content:
             with open(filename, "w", encoding="utf-8") as f:
                 f.write(content.rstrip() + "\n[DONE]\n")
-            return f"Notiz '{title}' als erledigt markiert."
+            return f"Note '{title}' marked as done."
         else:
-            return f"Notiz '{title}' ist bereits erledigt."
+            return f"Note '{title}' is already done."
     else:
-        return f"Notiz '{title}' nicht gefunden."
+        return f"Note '{title}' not found."
 
 
 class Shell:
@@ -76,19 +76,19 @@ class Shell:
         self.host = socket.gethostname().split(".")[0]
         # command name -> (function, help text)
         self.commands = {
-            "help": (self._help, "Zeige verfügbare Befehle"),
-            "exit": (self._exit, "Beende die Shell"),
-            "ls": (self._ls, "Listet Dateien im aktuellen Verzeichnis"),
-            "pwd": (self._pwd, "Zeigt das aktuelle Verzeichnis (relativ zu notes/)"),
-            "cd": (self._cd, "Wechselt das Verzeichnis: cd <path>"),
-            "add": (self._add, "Erstellt eine Notiz: add <title>"),
-            "edit": (self._edit, "Bearbeitet eine Notiz: edit <title>"),
-            "remove": (self._remove, "Löscht eine Notiz: remove <title>"),
-            "done": (self._done, "Markiert eine Notiz als erledigt: done <title>"),
-            "show": (self._show, "Zeigt den Inhalt einer Notiz: show <title>"),
-            "list": (self._list, "Listet Notizen im aktuellen Verzeichnis"),
-            "mkdir": (self._mkdir, "Erstellt ein Verzeichnis: mkdir <name>"),
-            "clear": (self._clear, "Leert die Konsole"),
+            "help": (self._help, "Show available commands"),
+            "exit": (self._exit, "Exit the shell"),
+            "ls": (self._ls, "List files in current directory"),
+            "pwd": (self._pwd, "Show current directory (relative to notes/)"),
+            "cd": (self._cd, "Change directory: cd <path>"),
+            "add": (self._add, "Create a note: add <title>"),
+            "edit": (self._edit, "Edit a note: edit <title>"),
+            "remove": (self._remove, "Delete a note or folder: remove <title> | remove -d <folder>"),
+            "done": (self._done, "Mark a note as done: done <title>"),
+            "show": (self._show, "Show note content: show <title>"),
+            "list": (self._list, "List notes in current directory"),
+            "mkdir": (self._mkdir, "Create a directory: mkdir <name>"),
+            "clear": (self._clear, "Clear the console"),
         }
         self._running = False
 
@@ -134,7 +134,7 @@ class Shell:
         try:
             target = self._resolve_path(args[0]) if args else self.cwd
             if not os.path.isdir(target):
-                return f"'{args[0]}' ist kein Verzeichnis"
+                return f"'{args[0]}' is not a directory"
             entries = os.listdir(target)
             if not entries:
                 return ""
@@ -161,7 +161,7 @@ class Shell:
                 return ""
             target = self._resolve_path(args[0])
             if not os.path.isdir(target):
-                return f"'{args[0]}' ist kein Verzeichnis"
+                return f"'{args[0]}' is not a directory"
             self.cwd = target
             return ""
         except Exception as e:
@@ -169,7 +169,7 @@ class Shell:
 
     def _add(self, args: List[str]) -> str:
         if len(args) < 2:
-            return "Benutzung: add <title> <content>"
+            return "Usage: add <title> <content>"
         title = args[0]
         content = " ".join(args[1:])
         try:
@@ -177,13 +177,13 @@ class Shell:
             filename = os.path.join(self.cwd, f"{title}.txt")
             with open(filename, "w", encoding="utf-8") as f:
                 f.write(content)
-            return f"Notiz '{title}' erstellt."
+            return f"Note '{title}' created."
         except Exception as e:
             return str(e)
 
     def _edit(self, args: List[str]) -> str:
         if len(args) < 2:
-            return "Benutzung: edit <title> <text> [--replace]"
+            return "Usage: edit <title> <text> [--replace]"
         
         title = args[0]
         filename = os.path.join(self.cwd, f"{title}.txt")
@@ -200,13 +200,13 @@ class Shell:
                 new_text = " ".join(args[1:])
             
             if not os.path.exists(filename):
-                return f"Notiz '{title}' nicht gefunden. Verwende 'add' zum Erstellen."
+                return f"Note '{title}' not found. Use 'add' to create."
             
             if replace_mode:
                 # Replace entire content
                 with open(filename, "w", encoding="utf-8") as f:
                     f.write(new_text)
-                return f"Notiz '{title}' wurde ersetzt."
+                return f"Note '{title}' replaced."
             else:
                 # Append to existing content
                 with open(filename, "r", encoding="utf-8") as f:
@@ -217,20 +217,42 @@ class Shell:
                         f.write(existing + "\n" + new_text)
                     else:
                         f.write(existing + new_text)
-                return f"Text zu Notiz '{title}' hinzugefügt."
+                return f"Text added to note '{title}'."
         except Exception as e:
             return str(e)
 
     def _remove(self, args: List[str]) -> str:
         if not args:
-            return "Benutzung: remove <title>"
+            return "Usage: remove <title> or remove -d <folder>"
+        
         try:
-            filename = os.path.join(self.cwd, f"{args[0]}.txt")
-            if os.path.exists(filename):
-                os.remove(filename)
-                return f"Notiz '{args[0]}' gelöscht."
+            # Check if folder flag is present
+            is_folder = False
+            target_name = args[0]
+            
+            if args[0] in ["-d", "--folder", "--dir"]:
+                is_folder = True
+                if len(args) < 2:
+                    return "Usage: remove -d <folder>"
+                target_name = args[1]
+            
+            if is_folder:
+                # Remove folder
+                folder_path = self._resolve_path(target_name)
+                if os.path.exists(folder_path) and os.path.isdir(folder_path):
+                    import shutil
+                    shutil.rmtree(folder_path)
+                    return f"Folder '{target_name}' and its content deleted."
+                else:
+                    return f"Folder '{target_name}' not found."
             else:
-                return f"Notiz '{args[0]}' nicht gefunden."
+                # Remove note file
+                filename = os.path.join(self.cwd, f"{target_name}.txt")
+                if os.path.exists(filename):
+                    os.remove(filename)
+                    return f"Note '{target_name}' deleted."
+                else:
+                    return f"Note '{target_name}' not found."
         except Exception as e:
             return str(e)
 
@@ -238,17 +260,17 @@ class Shell:
         try:
             notes = [f[:-4] for f in os.listdir(self.cwd) if f.endswith(".txt")]
             if notes:
-                out = ["Notizen in diesem Verzeichnis:"]
+                out = ["Notes in this directory:"]
                 out += [f" - {n}" for n in sorted(notes)]
                 return "\n".join(out)
             else:
-                return "Keine Notizen in diesem Verzeichnis."
+                return "No notes in this directory."
         except Exception as e:
             return str(e)
 
     def _done(self, args: List[str]) -> str:
         if not args:
-            return "Benutzung: done <title>"
+            return "Usage: done <title>"
         try:
             filename = os.path.join(self.cwd, f"{args[0]}.txt")
             if os.path.exists(filename):
@@ -257,17 +279,17 @@ class Shell:
                 if "[DONE]" not in content:
                     with open(filename, "w", encoding="utf-8") as f:
                         f.write(content.rstrip() + "\n[DONE]\n")
-                    return f"Notiz '{args[0]}' als erledigt markiert."
+                    return f"Note '{args[0]}' marked as done."
                 else:
-                    return f"Notiz '{args[0]}' ist bereits erledigt."
+                    return f"Note '{args[0]}' is already done."
             else:
-                return f"Notiz '{args[0]}' nicht gefunden."
+                return f"Note '{args[0]}' not found."
         except Exception as e:
             return str(e)
 
     def _show(self, args: List[str]) -> str:
         if not args:
-            return "Benutzung: show <title>"
+            return "Usage: show <title>"
         try:
             filename = os.path.join(self.cwd, f"{args[0]}.txt")
             if os.path.exists(filename):
@@ -275,17 +297,17 @@ class Shell:
                     content = f.read()
                 return f"=== {args[0]} ===\n{content}"
             else:
-                return f"Notiz '{args[0]}' nicht gefunden."
+                return f"Note '{args[0]}' not found."
         except Exception as e:
             return str(e)
 
     def _mkdir(self, args: List[str]) -> str:
         if not args:
-            return "Benutzung: mkdir <name>"
+            return "Usage: mkdir <name>"
         try:
             path = self._resolve_path(args[0])
             os.makedirs(path, exist_ok=True)
-            return f"Verzeichnis '{args[0]}' erstellt."
+            return f"Directory '{args[0]}' created."
         except Exception as e:
             return str(e)
 
@@ -312,7 +334,7 @@ class Shell:
             except Exception as e:
                 return str(e)
         else:
-            return f"Befehl nicht gefunden: {cmd}"
+            return f"Command not found: {cmd}"
 
     def interactive(self):
         """Start the interactive shell loop (uses readline)."""
@@ -358,7 +380,7 @@ def handle_cli(args):
     remove_parser.add_argument("title")
 
     subparsers.add_parser("list")
-    subparsers.add_parser("shell", help="Starte interaktive Shell")
+    subparsers.add_parser("shell", help="Start interactive shell")
 
     parsed = parser.parse_args(args)
 
