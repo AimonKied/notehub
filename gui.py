@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QListWidget, QTextEdit, QPushButton, QHBoxLayout, QInputDialog, QMessageBox, QLineEdit, QLabel
 )
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFont, QTextCursor
+from PyQt6.QtGui import QFont, QTextCursor, QKeyEvent
 from cli import Shell
 
 NOTES_DIR = "notes"
@@ -12,6 +12,114 @@ NOTES_DIR = "notes"
 def ensure_notes_dir():
     if not os.path.exists(NOTES_DIR):
         os.makedirs(NOTES_DIR)
+
+
+class CommandLineEdit(QLineEdit):
+    """Custom QLineEdit with Tab completion support."""
+    
+    def __init__(self, shell, parent=None):
+        super().__init__(parent)
+        self.shell = shell
+        self.completion_matches = []
+        self.completion_index = 0
+        # Prevent Tab from moving focus to next widget
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        
+    def event(self, event):
+        """Override event to capture Tab key before focus change."""
+        if event.type() == event.Type.KeyPress:
+            if event.key() == Qt.Key.Key_Tab:
+                self.handle_tab_completion()
+                return True  # Event handled, don't propagate
+        return super().event(event)
+        
+    def keyPressEvent(self, event: QKeyEvent):
+        """Handle key press events."""
+        if event.key() == Qt.Key.Key_Tab:
+            # Already handled in event()
+            return
+        else:
+            # Reset completion state on any other key
+            self.completion_matches = []
+            self.completion_index = 0
+            super().keyPressEvent(event)
+    
+    def handle_tab_completion(self):
+        """Handle Tab key press for auto-completion."""
+        text = self.text()
+        cursor_pos = self.cursorPosition()
+        
+        # Get the word at cursor position
+        before_cursor = text[:cursor_pos]
+        parts = before_cursor.split()
+        
+        if not parts:
+            # No text yet, show all commands
+            self.completion_matches = sorted(self.shell.commands.keys())
+            self.completion_index = 0
+            if self.completion_matches:
+                self.setText(self.completion_matches[0])
+            return
+        
+        # If we're completing the first word (command name)
+        if len(parts) == 1 and not before_cursor.endswith(' '):
+            prefix = parts[0]
+            if not self.completion_matches:
+                # Find all commands that start with prefix
+                self.completion_matches = sorted([
+                    cmd for cmd in self.shell.commands.keys() 
+                    if cmd.startswith(prefix)
+                ])
+                self.completion_index = 0
+            
+            if self.completion_matches:
+                # Cycle through matches
+                match = self.completion_matches[self.completion_index]
+                self.setText(match)
+                self.completion_index = (self.completion_index + 1) % len(self.completion_matches)
+        else:
+            # Complete file/folder names
+            self.complete_filename(parts, before_cursor)
+    
+    def complete_filename(self, parts, before_cursor):
+        """Complete file or folder names."""
+        # Get the word being completed
+        if before_cursor.endswith(' '):
+            prefix = ""
+        else:
+            prefix = parts[-1]
+        
+        if not self.completion_matches:
+            # Get files and folders in current directory
+            try:
+                entries = os.listdir(self.shell.cwd)
+                # Filter by prefix and add appropriate suffix
+                matches = []
+                for entry in sorted(entries):
+                    if entry.startswith(prefix):
+                        full_path = os.path.join(self.shell.cwd, entry)
+                        if os.path.isdir(full_path):
+                            matches.append(entry + "/")
+                        elif entry.endswith(".txt"):
+                            # Remove .txt extension for notes
+                            matches.append(entry[:-4])
+                        else:
+                            matches.append(entry)
+                self.completion_matches = matches
+                self.completion_index = 0
+            except Exception:
+                return
+        
+        if self.completion_matches:
+            # Replace the last word with the match
+            match = self.completion_matches[self.completion_index]
+            parts_before = parts[:-1] if len(parts) > 1 and not before_cursor.endswith(' ') else parts
+            new_text = ' '.join(parts_before)
+            if new_text:
+                new_text += ' '
+            new_text += match
+            self.setText(new_text)
+            self.completion_index = (self.completion_index + 1) % len(self.completion_matches)
 
 class NoteHub(QWidget):
     def __init__(self):
@@ -56,7 +164,11 @@ class NoteHub(QWidget):
         """)
         cmd_layout.addWidget(self.prompt_label)
 
-        self.command_input = QLineEdit()
+        # Initialize Shell instance first (needed for CommandLineEdit)
+        self.shell = Shell()
+
+        # Use custom CommandLineEdit with Tab completion
+        self.command_input = CommandLineEdit(self.shell)
         self.command_input.setStyleSheet("""
             QLineEdit {
                 background-color: #1e1e1e;
@@ -71,8 +183,6 @@ class NoteHub(QWidget):
         cmd_layout.addWidget(self.command_input)
         layout.addLayout(cmd_layout)
 
-        # Initialize Shell instance
-        self.shell = Shell()
         self.update_prompt()
         self.append_terminal("Willkommen bei NoteHub! Gib 'help' ein, um alle Befehle zu sehen.\n")
 
