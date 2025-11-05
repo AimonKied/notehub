@@ -3,8 +3,8 @@ import os
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QListWidget, QTextEdit, QPushButton, QHBoxLayout, QInputDialog, QMessageBox, QLineEdit, QLabel
 )
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFont, QTextCursor, QKeyEvent
+from PyQt6.QtCore import Qt, QRect, QSize
+from PyQt6.QtGui import QFont, QTextCursor, QKeyEvent, QPainter, QColor, QTextFormat
 from cli import Shell
 
 NOTES_DIR = "notes"
@@ -122,6 +122,20 @@ class CommandLineEdit(QLineEdit):
             self.completion_index = (self.completion_index + 1) % len(self.completion_matches)
 
 
+class LineNumberArea(QWidget):
+    """Widget to display line numbers next to the text editor."""
+    
+    def __init__(self, editor):
+        super().__init__(editor)
+        self.editor = editor
+    
+    def sizeHint(self):
+        return QSize(self.editor.line_number_area_width(), 0)
+    
+    def paintEvent(self, event):
+        self.editor.line_number_area_paint_event(event)
+
+
 class NoteTextEdit(QTextEdit):
     """Custom QTextEdit that saves on Enter and allows Shift+Enter for new lines.
     Also supports todo checkboxes: double-click a line to toggle [ ] <-> [x]."""
@@ -130,6 +144,15 @@ class NoteTextEdit(QTextEdit):
         super().__init__(parent)
         self.parent_widget = parent
         self.edit_mode = False  # True when in add/edit mode
+        
+        # Line number area
+        self.line_number_area = LineNumberArea(self)
+        
+        # Connect signals to update line numbers live
+        self.document().contentsChanged.connect(self.update_line_numbers)
+        self.verticalScrollBar().valueChanged.connect(self.update_line_numbers)
+        
+        self.update_line_number_area_width()
         
     def mouseDoubleClickEvent(self, event):
         """Toggle todo checkbox on double-click."""
@@ -149,6 +172,64 @@ class NoteTextEdit(QTextEdit):
         else:
             # Not a todo, do normal double-click behavior
             super().mouseDoubleClickEvent(event)
+    
+    def line_number_area_width(self):
+        """Calculate the width needed for line numbers."""
+        digits = len(str(max(1, self.document().blockCount())))
+        space = 10 + self.fontMetrics().horizontalAdvance('9') * digits
+        return space
+    
+    def update_line_number_area_width(self):
+        """Update viewport margins to make room for line numbers."""
+        self.setViewportMargins(self.line_number_area_width(), 0, 0, 0)
+    
+    def update_line_numbers(self):
+        """Update line number area and adjust width if needed."""
+        self.line_number_area.update()
+        self.update_line_number_area_width()
+    
+    def firstVisibleBlock(self):
+        """Get the first visible block in the text edit."""
+        # Get the cursor at the top of the viewport
+        cursor = self.cursorForPosition(self.viewport().rect().topLeft())
+        return cursor.block()
+    
+    def resizeEvent(self, event):
+        """Handle resize to adjust line number area."""
+        super().resizeEvent(event)
+        cr = self.contentsRect()
+        self.line_number_area.setGeometry(QRect(cr.left(), cr.top(), self.line_number_area_width(), cr.height()))
+    
+    def line_number_area_paint_event(self, event):
+        """Paint line numbers."""
+        painter = QPainter(self.line_number_area)
+        # Use same background as editor
+        painter.fillRect(event.rect(), self.palette().base())
+        
+        # Get the first visible block
+        block = self.firstVisibleBlock()
+        block_number = block.blockNumber()
+        
+        # Start from the top of the first visible block
+        cursor = QTextCursor(block)
+        rect = self.cursorRect(cursor)
+        top = rect.top()
+        
+        # Draw line numbers for all visible blocks
+        while block.isValid() and top <= event.rect().bottom():
+            if block.isVisible() and top >= event.rect().top():
+                number = str(block_number + 1)
+                painter.setPen(QColor(100, 100, 100))  # Subtle gray text
+                painter.setFont(self.font())
+                painter.drawText(0, top, self.line_number_area.width() - 3, 
+                               self.fontMetrics().height(), 
+                               Qt.AlignmentFlag.AlignRight, number)
+            
+            block = block.next()
+            cursor = QTextCursor(block)
+            rect = self.cursorRect(cursor)
+            top = rect.top()
+            block_number += 1
         
     def keyPressEvent(self, event: QKeyEvent):
         """Handle Enter vs Shift+Enter."""
