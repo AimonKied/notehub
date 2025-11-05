@@ -246,6 +246,9 @@ class NoteHub(QWidget):
         self.current_note = None
         self.edit_mode_type = None  # 'add' or 'edit'
         self.refresh_notes()
+        
+        # Set focus to command input on startup
+        self.command_input.setFocus()
 
     def refresh_notes(self):
         """Refresh notes list showing only the current directory's content"""
@@ -386,11 +389,11 @@ class NoteHub(QWidget):
                     f.write(content)
                 self.append_terminal(f"Notiz '{self.current_note}' gespeichert.\n")
             
-            # Exit edit mode
+            # Exit edit mode and return focus to command line
             self.text_area.edit_mode = False
             self.edit_mode_type = None
             self.refresh_notes()
-            self.text_area.setFocus()
+            self.command_input.setFocus()
         except Exception as e:
             self.append_terminal(f"Fehler: {str(e)}\n")
 
