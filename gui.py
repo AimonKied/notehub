@@ -123,12 +123,32 @@ class CommandLineEdit(QLineEdit):
 
 
 class NoteTextEdit(QTextEdit):
-    """Custom QTextEdit that saves on Enter and allows Shift+Enter for new lines."""
+    """Custom QTextEdit that saves on Enter and allows Shift+Enter for new lines.
+    Also supports todo checkboxes: double-click a line to toggle [ ] <-> [x]."""
     
     def __init__(self, parent=None):
         super().__init__(parent)
         self.parent_widget = parent
         self.edit_mode = False  # True when in add/edit mode
+        
+    def mouseDoubleClickEvent(self, event):
+        """Toggle todo checkbox on double-click."""
+        cursor = self.textCursor()
+        cursor.select(cursor.SelectionType.LineUnderCursor)
+        line = cursor.selectedText()
+        
+        # Check if line is a todo item
+        if line.strip().startswith("[ ]"):
+            # Check it
+            new_line = line.replace("[ ]", "[x]", 1)
+            cursor.insertText(new_line)
+        elif line.strip().startswith("[x]"):
+            # Uncheck it
+            new_line = line.replace("[x]", "[ ]", 1)
+            cursor.insertText(new_line)
+        else:
+            # Not a todo, do normal double-click behavior
+            super().mouseDoubleClickEvent(event)
         
     def keyPressEvent(self, event: QKeyEvent):
         """Handle Enter vs Shift+Enter."""
@@ -501,6 +521,16 @@ class NoteHub(QWidget):
         # (add/edit are handled separately in finish_editing)
         if command.split()[0] in ["remove", "done", "cd", "mkdir"]:
             self.refresh_notes()
+        
+        # If check command was used and note is currently displayed, reload it
+        if command.split()[0] == "check" and self.current_note:
+            cmd_parts = command.split()
+            if len(cmd_parts) >= 2 and cmd_parts[1] == self.current_note:
+                # Reload the note in the editor
+                filepath = os.path.join(self.shell.cwd, f"{self.current_note}.txt")
+                if os.path.exists(filepath):
+                    with open(filepath, "r", encoding="utf-8") as f:
+                        self.text_area.setPlainText(f.read())
 
 def run_gui():
     app = QApplication([])
