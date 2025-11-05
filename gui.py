@@ -121,6 +121,35 @@ class CommandLineEdit(QLineEdit):
             self.setText(new_text)
             self.completion_index = (self.completion_index + 1) % len(self.completion_matches)
 
+
+class NoteTextEdit(QTextEdit):
+    """Custom QTextEdit that saves on Enter and allows Shift+Enter for new lines."""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.parent_widget = parent
+        self.edit_mode = False  # True when in add/edit mode
+        
+    def keyPressEvent(self, event: QKeyEvent):
+        """Handle Enter vs Shift+Enter."""
+        if self.edit_mode:
+            # In edit mode: Enter saves, Shift+Enter = new line
+            if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+                if event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
+                    # Shift+Enter: insert new line
+                    super().keyPressEvent(event)
+                else:
+                    # Enter alone: save and exit edit mode
+                    if self.parent_widget:
+                        self.parent_widget.finish_editing()
+                    return
+            else:
+                super().keyPressEvent(event)
+        else:
+            # Normal mode: all keys work normally
+            super().keyPressEvent(event)
+
+
 class NoteHub(QWidget):
     def __init__(self):
         super().__init__()
@@ -194,7 +223,7 @@ class NoteHub(QWidget):
         self.note_list.itemClicked.connect(self.load_note)
         layout.addWidget(self.note_list)
 
-        self.text_area = QTextEdit()
+        self.text_area = NoteTextEdit(self)
         layout.addWidget(self.text_area)
 
         button_layout = QHBoxLayout()
@@ -215,6 +244,7 @@ class NoteHub(QWidget):
         self.setLayout(layout)
 
         self.current_note = None
+        self.edit_mode_type = None  # 'add' or 'edit'
         self.refresh_notes()
 
     def refresh_notes(self):
@@ -336,6 +366,34 @@ class NoteHub(QWidget):
         self.terminal_output.insertPlainText(text)
         self.terminal_output.moveCursor(QTextCursor.MoveOperation.End)
 
+    def finish_editing(self):
+        """Called when user presses Enter in edit mode to save the note."""
+        if not self.current_note:
+            return
+        
+        content = self.text_area.toPlainText()
+        filepath = os.path.join(self.shell.cwd, f"{self.current_note}.txt")
+        
+        try:
+            if self.edit_mode_type == "add":
+                # Create new note
+                with open(filepath, "w", encoding="utf-8") as f:
+                    f.write(content)
+                self.append_terminal(f"Notiz '{self.current_note}' erstellt.\n")
+            elif self.edit_mode_type == "edit":
+                # Update existing note
+                with open(filepath, "w", encoding="utf-8") as f:
+                    f.write(content)
+                self.append_terminal(f"Notiz '{self.current_note}' gespeichert.\n")
+            
+            # Exit edit mode
+            self.text_area.edit_mode = False
+            self.edit_mode_type = None
+            self.refresh_notes()
+            self.text_area.setFocus()
+        except Exception as e:
+            self.append_terminal(f"Fehler: {str(e)}\n")
+
     def execute_command(self):
         """Execute the command entered by the user."""
         command = self.command_input.text()
@@ -355,8 +413,54 @@ class NoteHub(QWidget):
             self.close()  # Close the GUI window
             return
 
-        # Special handling for show command - display in text area instead of terminal
+        # Special handling for add command - activate edit mode
         cmd_parts = command.split()
+        if cmd_parts and cmd_parts[0] == "add":
+            self.append_terminal(f"{self.shell.prompt}{command}\n")
+            if len(cmd_parts) > 1:
+                note_title = cmd_parts[1]
+                filepath = os.path.join(self.shell.cwd, f"{note_title}.txt")
+                if os.path.exists(filepath):
+                    self.append_terminal(f"Notiz '{note_title}' existiert bereits. Verwende 'edit'.\n")
+                else:
+                    self.current_note = note_title
+                    self.edit_mode_type = "add"
+                    self.text_area.clear()
+                    self.text_area.edit_mode = True
+                    self.text_area.setFocus()
+                    self.append_terminal(f"Editor aktiviert. Schreibe deine Notiz. Enter = Speichern, Shift+Enter = Neue Zeile.\n")
+            else:
+                self.append_terminal("Benutzung: add <title>\n")
+            self.command_input.clear()
+            return
+
+        # Special handling for edit command - activate edit mode
+        if cmd_parts and cmd_parts[0] == "edit":
+            self.append_terminal(f"{self.shell.prompt}{command}\n")
+            if len(cmd_parts) > 1:
+                note_title = cmd_parts[1]
+                filepath = os.path.join(self.shell.cwd, f"{note_title}.txt")
+                if os.path.exists(filepath):
+                    with open(filepath, "r", encoding="utf-8") as f:
+                        content = f.read()
+                    self.current_note = note_title
+                    self.edit_mode_type = "edit"
+                    self.text_area.setPlainText(content)
+                    self.text_area.edit_mode = True
+                    self.text_area.setFocus()
+                    # Move cursor to end
+                    cursor = self.text_area.textCursor()
+                    cursor.movePosition(QTextCursor.MoveOperation.End)
+                    self.text_area.setTextCursor(cursor)
+                    self.append_terminal(f"Editor aktiviert. Bearbeite deine Notiz. Enter = Speichern, Shift+Enter = Neue Zeile.\n")
+                else:
+                    self.append_terminal(f"Notiz '{note_title}' nicht gefunden.\n")
+            else:
+                self.append_terminal("Benutzung: edit <title>\n")
+            self.command_input.clear()
+            return
+
+        # Special handling for show command - display in text area instead of terminal
         if cmd_parts and cmd_parts[0] == "show":
             self.append_terminal(f"{self.shell.prompt}{command}\n")
             if len(cmd_parts) > 1:
@@ -367,6 +471,7 @@ class NoteHub(QWidget):
                         content = f.read()
                     self.text_area.setPlainText(content)
                     self.current_note = note_title
+                    self.text_area.edit_mode = False
                     self.append_terminal(f"Notiz '{note_title}' wird im Editor angezeigt.\n")
                 else:
                     self.append_terminal(f"Notiz '{note_title}' nicht gefunden.\n")
@@ -389,8 +494,9 @@ class NoteHub(QWidget):
         self.command_input.clear()
         self.update_prompt()
 
-        # Refresh notes list if add/remove/done/cd/mkdir commands were used
-        if command.split()[0] in ["add", "remove", "done", "cd", "mkdir"]:
+        # Refresh notes list if remove/done/cd/mkdir commands were used
+        # (add/edit are handled separately in finish_editing)
+        if command.split()[0] in ["remove", "done", "cd", "mkdir"]:
             self.refresh_notes()
 
 def run_gui():

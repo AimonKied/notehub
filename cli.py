@@ -81,7 +81,8 @@ class Shell:
             "ls": (self._ls, "Listet Dateien im aktuellen Verzeichnis"),
             "pwd": (self._pwd, "Zeigt das aktuelle Verzeichnis (relativ zu notes/)"),
             "cd": (self._cd, "Wechselt das Verzeichnis: cd <path>"),
-            "add": (self._add, "Erstellt eine Notiz: add <title> <content>"),
+            "add": (self._add, "Erstellt eine Notiz: add <title>"),
+            "edit": (self._edit, "Bearbeitet eine Notiz: edit <title>"),
             "remove": (self._remove, "Löscht eine Notiz: remove <title>"),
             "done": (self._done, "Markiert eine Notiz als erledigt: done <title>"),
             "show": (self._show, "Zeigt den Inhalt einer Notiz: show <title>"),
@@ -177,6 +178,46 @@ class Shell:
             with open(filename, "w", encoding="utf-8") as f:
                 f.write(content)
             return f"Notiz '{title}' erstellt."
+        except Exception as e:
+            return str(e)
+
+    def _edit(self, args: List[str]) -> str:
+        if len(args) < 2:
+            return "Benutzung: edit <title> <text> [--replace]"
+        
+        title = args[0]
+        filename = os.path.join(self.cwd, f"{title}.txt")
+        
+        try:
+            # Check if --replace flag is present
+            if "--replace" in args:
+                replace_mode = True
+                # Remove --replace from args to get the text
+                text_args = [a for a in args[1:] if a != "--replace"]
+                new_text = " ".join(text_args)
+            else:
+                replace_mode = False
+                new_text = " ".join(args[1:])
+            
+            if not os.path.exists(filename):
+                return f"Notiz '{title}' nicht gefunden. Verwende 'add' zum Erstellen."
+            
+            if replace_mode:
+                # Replace entire content
+                with open(filename, "w", encoding="utf-8") as f:
+                    f.write(new_text)
+                return f"Notiz '{title}' wurde ersetzt."
+            else:
+                # Append to existing content
+                with open(filename, "r", encoding="utf-8") as f:
+                    existing = f.read()
+                with open(filename, "w", encoding="utf-8") as f:
+                    # Add space or newline if content exists
+                    if existing and not existing.endswith("\n"):
+                        f.write(existing + "\n" + new_text)
+                    else:
+                        f.write(existing + new_text)
+                return f"Text zu Notiz '{title}' hinzugefügt."
         except Exception as e:
             return str(e)
 
