@@ -84,6 +84,7 @@ class Shell:
             "add": (self._add, "Erstellt eine Notiz: add <title> <content>"),
             "remove": (self._remove, "Löscht eine Notiz: remove <title>"),
             "done": (self._done, "Markiert eine Notiz als erledigt: done <title>"),
+            "show": (self._show, "Zeigt den Inhalt einer Notiz: show <title>"),
             "list": (self._list, "Listet Notizen im aktuellen Verzeichnis"),
             "mkdir": (self._mkdir, "Erstellt ein Verzeichnis: mkdir <name>"),
             "clear": (self._clear, "Leert die Konsole"),
@@ -218,6 +219,20 @@ class Shell:
                     return f"Notiz '{args[0]}' als erledigt markiert."
                 else:
                     return f"Notiz '{args[0]}' ist bereits erledigt."
+            else:
+                return f"Notiz '{args[0]}' nicht gefunden."
+        except Exception as e:
+            return str(e)
+
+    def _show(self, args: List[str]) -> str:
+        if not args:
+            return "Benutzung: show <title>"
+        try:
+            filename = os.path.join(self.cwd, f"{args[0]}.txt")
+            if os.path.exists(filename):
+                with open(filename, "r", encoding="utf-8") as f:
+                    content = f.read()
+                return f"=== {args[0]} ===\n{content}"
             else:
                 return f"Notiz '{args[0]}' nicht gefunden."
         except Exception as e:

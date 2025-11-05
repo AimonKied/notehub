@@ -355,6 +355,26 @@ class NoteHub(QWidget):
             self.close()  # Close the GUI window
             return
 
+        # Special handling for show command - display in text area instead of terminal
+        cmd_parts = command.split()
+        if cmd_parts and cmd_parts[0] == "show":
+            self.append_terminal(f"{self.shell.prompt}{command}\n")
+            if len(cmd_parts) > 1:
+                note_title = cmd_parts[1]
+                filepath = os.path.join(self.shell.cwd, f"{note_title}.txt")
+                if os.path.exists(filepath):
+                    with open(filepath, "r", encoding="utf-8") as f:
+                        content = f.read()
+                    self.text_area.setPlainText(content)
+                    self.current_note = note_title
+                    self.append_terminal(f"Notiz '{note_title}' wird im Editor angezeigt.\n")
+                else:
+                    self.append_terminal(f"Notiz '{note_title}' nicht gefunden.\n")
+            else:
+                self.append_terminal("Benutzung: show <title>\n")
+            self.command_input.clear()
+            return
+
         # Display the command in the terminal output
         self.append_terminal(f"{self.shell.prompt}{command}\n")
 
