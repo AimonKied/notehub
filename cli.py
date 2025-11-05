@@ -86,7 +86,6 @@ class Shell:
             "done": (self._done, "Markiert eine Notiz als erledigt: done <title>"),
             "list": (self._list, "Listet Notizen im aktuellen Verzeichnis"),
             "mkdir": (self._mkdir, "Erstellt ein Verzeichnis: mkdir <name>"),
-            "echo": (self._echo, "Gibt Text aus: echo <text>"),
             "clear": (self._clear, "Leert die Konsole"),
         }
         self._running = False
@@ -233,9 +232,6 @@ class Shell:
             return f"Verzeichnis '{args[0]}' erstellt."
         except Exception as e:
             return str(e)
-
-    def _echo(self, args: List[str]) -> str:
-        return " ".join(args)
 
     def _clear(self, args: List[str]) -> str:
         # clear screen for interactive use

@@ -348,6 +348,13 @@ class NoteHub(QWidget):
             self.command_input.clear()
             return
 
+        # Special handling for exit command
+        if command.strip() == "exit":
+            self.append_terminal(f"{self.shell.prompt}{command}\n")
+            self.append_terminal("Bye.\n")
+            self.close()  # Close the GUI window
+            return
+
         # Display the command in the terminal output
         self.append_terminal(f"{self.shell.prompt}{command}\n")
 
