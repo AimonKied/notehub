@@ -1,6 +1,6 @@
 # NoteHub
 
-Simple note-taking application with GUI and CLI interfaces.
+A lightweight note management system featuring an interactive shell interface, GUI support, and seamless email integration. Built for developers who prefer the command line but want the flexibility of a graphical interface.
 
 ## Features
 
