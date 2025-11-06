@@ -39,7 +39,7 @@ email <note>             # Send via email
 
 ## Email Setup
 
-Requires [notehub-email](../notehub-email) configured in sibling directory.
+Requires [notehub-email](https://github.com/AimonKied/notehub-email) configured in sibling directory.
 
 ## Notes Format
 
