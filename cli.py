@@ -170,7 +170,7 @@ class Shell:
             "list": (self._list, "List notes in current directory"),
             "mkdir": (self._mkdir, "Create a directory: mkdir <name>"),
             "clear": (self._clear, "Clear the console"),
-            "email": (self._email, "Send a note via email: email <title>"),
+            "send": (self._send, "Send a note via email: email <title>"),
         }
         self._running = False
 
@@ -438,7 +438,7 @@ class Shell:
         # clear screen for interactive use
         return "\x1bc"
 
-    def _email(self, args: List[str]) -> str:
+    def _send(self, args: List[str]) -> str:
         if not args:
             return "Usage: email <title>"
         try:
