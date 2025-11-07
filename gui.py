@@ -285,6 +285,13 @@ class NoteTextEdit(QTextEdit):
                 if event.key() == Qt.Key.Key_Escape:
                     self.vim.enter_normal_mode()
                     return
+                
+                # Check for "kj" escape sequence
+                result = self.vim.handle_insert_mode_key(event)
+                if result == 'normal':
+                    self.vim.enter_normal_mode()
+                    return
+                
                 # In insert mode, Enter just adds a new line (no save)
                 # Normal typing and editing
                 super().keyPressEvent(event)

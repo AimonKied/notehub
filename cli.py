@@ -248,6 +248,7 @@ Insert Mode:
   o              - open new line below
   O              - open new line above
   ESC            - return to normal mode
+  kj             - return to normal mode (alternative to ESC)
 
 Editing (Normal Mode):
   x              - delete character under cursor

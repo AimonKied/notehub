@@ -15,6 +15,8 @@ class VimMode:
         self.enabled = False
         self.current_mode = "normal"  # "normal" or "insert"
         self.command_buffer = ""  # For multi-key commands like "dd", "gg"
+        self.last_insert_key = ""  # For "jk" escape sequence
+        self.last_insert_time = 0  # Timestamp for last insert key
         
     def toggle(self):
         """Toggle Vim mode on/off."""
@@ -57,7 +59,40 @@ class VimMode:
         """Switch to normal mode."""
         self.current_mode = "normal"
         # Don't use setReadOnly - we handle this in keyPressEvent
+        # Reset insert mode tracking
+        self.last_insert_key = ""
         self.update_visual_indicator()
+    
+    def handle_insert_mode_key(self, event):
+        """
+        Handle key press in Vim insert mode.
+        Returns 'normal' if should switch to normal mode (kj pressed).
+        Returns None otherwise (key should be processed normally).
+        """
+        import time
+        text = event.text()
+        current_time = time.time()
+        
+        # Check for "kj" escape sequence
+        if text == 'k':
+            self.last_insert_key = 'k'
+            self.last_insert_time = current_time
+            return None  # Process 'k' normally
+        elif text == 'j' and self.last_insert_key == 'k':
+            # Check if 'j' was pressed within 0.5 seconds of 'k'
+            if current_time - self.last_insert_time < 0.5:
+                # Delete the 'k' that was just typed
+                cursor = self.text_edit.textCursor()
+                cursor.deletePreviousChar()
+                self.text_edit.setTextCursor(cursor)
+                # Switch to normal mode
+                return 'normal'
+        
+        # Reset tracking if any other key
+        if text != 'k':
+            self.last_insert_key = ""
+        
+        return None
     
     def handle_normal_mode_key(self, event):
         """
