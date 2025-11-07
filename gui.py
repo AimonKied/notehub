@@ -1,14 +1,16 @@
 # gui.py
 import os
 from PyQt6.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, QListWidget, QTextEdit, QPushButton, QHBoxLayout, QInputDialog, QMessageBox, QLineEdit, QLabel, QSplitter
+    QApplication, QWidget, QVBoxLayout, QListWidget, QTextEdit, QPushButton, QHBoxLayout, QInputDialog, QMessageBox, QLineEdit, QLabel, QSplitter, QDialog, QToolButton
 )
 from PyQt6.QtCore import Qt, QRect, QSize
 from PyQt6.QtGui import QFont, QTextCursor, QKeyEvent, QPainter, QColor, QTextFormat
 from cli import Shell
 from vim_mode import VimMode
+from settings import load_settings, save_settings, SettingsDialog
 
 NOTES_DIR = "notes"
+
 
 def ensure_notes_dir():
     if not os.path.exists(NOTES_DIR):
@@ -323,8 +325,24 @@ class NoteHub(QWidget):
         self.resize(800, 600)
 
         ensure_notes_dir()
+        
+        # Load settings
+        self.settings = load_settings()
 
         layout = QVBoxLayout()
+        
+        # ===== Top bar with settings button =====
+        top_bar = QHBoxLayout()
+        top_bar.addStretch()
+        
+        settings_btn = QToolButton()
+        settings_btn.setText("⚙")  # Settings icon
+        settings_btn.setFixedSize(30, 30)
+        settings_btn.setToolTip("Settings")
+        settings_btn.clicked.connect(self.open_settings)
+        top_bar.addWidget(settings_btn)
+        
+        layout.addLayout(top_bar)
 
         # ===== Terminal-like Command Line Section =====
         terminal_widget = QWidget()
@@ -337,29 +355,13 @@ class NoteHub(QWidget):
         # Text area for terminal output (read-only, monospace font, dark theme)
         self.terminal_output = QTextEdit()
         self.terminal_output.setReadOnly(True)
-        self.terminal_output.setStyleSheet("""
-            QTextEdit {
-                background-color: #1e1e1e;
-                color: #00ff00;
-                font-family: 'Courier New', monospace;
-                font-size: 12px;
-                padding: 5px;
-            }
-        """)
+        self.apply_terminal_style()
         terminal_layout.addWidget(self.terminal_output)
 
         # Command input line (user types commands here)
         cmd_layout = QHBoxLayout()
         self.prompt_label = QLabel()
-        self.prompt_label.setStyleSheet("""
-            QLabel {
-                background-color: #1e1e1e;
-                color: #00ff00;
-                font-family: 'Courier New', monospace;
-                font-size: 12px;
-                padding: 5px;
-            }
-        """)
+        self.apply_prompt_style()
         cmd_layout.addWidget(self.prompt_label)
 
         # Initialize Shell instance first (needed for CommandLineEdit)
@@ -367,16 +369,7 @@ class NoteHub(QWidget):
 
         # Use custom CommandLineEdit with Tab completion
         self.command_input = CommandLineEdit(self.shell)
-        self.command_input.setStyleSheet("""
-            QLineEdit {
-                background-color: #1e1e1e;
-                color: #00ff00;
-                font-family: 'Courier New', monospace;
-                font-size: 12px;
-                border: none;
-                padding: 5px;
-            }
-        """)
+        self.apply_command_input_style()
         self.command_input.returnPressed.connect(self.execute_command)
         cmd_layout.addWidget(self.command_input)
         terminal_layout.addLayout(cmd_layout)
@@ -408,6 +401,7 @@ class NoteHub(QWidget):
         editor_layout.setContentsMargins(0, 0, 0, 0)
         
         self.text_area = NoteTextEdit(self)
+        self.apply_editor_style()  # Apply editor colors from settings
         editor_layout.addWidget(self.text_area)
 
         button_layout = QHBoxLayout()
@@ -463,6 +457,12 @@ class NoteHub(QWidget):
         self.current_note = None
         self.edit_mode_type = None  # 'add' or 'edit'
         self.refresh_notes()
+        
+        # Apply vim colors from settings
+        self.text_area.vim.normal_border_color = self.settings['vim_normal_border']
+        self.text_area.vim.insert_border_color = self.settings['vim_insert_border']
+        self.text_area.vim.editor_bg = self.settings['editor_bg']
+        self.text_area.vim.editor_fg = self.settings['editor_fg']
         
         # Set focus to command input on startup
         self.command_input.setFocus()
@@ -754,6 +754,73 @@ class NoteHub(QWidget):
                 }
             """)
             self.append_terminal("Vim mode disabled.\n")
+    
+    def apply_terminal_style(self):
+        """Apply terminal colors from settings."""
+        self.terminal_output.setStyleSheet(f"""
+            QTextEdit {{
+                background-color: {self.settings['terminal_bg']};
+                color: {self.settings['terminal_fg']};
+                font-family: 'Courier New', monospace;
+                font-size: 12px;
+                padding: 5px;
+            }}
+        """)
+    
+    def apply_prompt_style(self):
+        """Apply prompt label colors from settings."""
+        self.prompt_label.setStyleSheet(f"""
+            QLabel {{
+                background-color: {self.settings['terminal_bg']};
+                color: {self.settings['terminal_fg']};
+                font-family: 'Courier New', monospace;
+                font-size: 12px;
+                padding: 5px;
+            }}
+        """)
+    
+    def apply_command_input_style(self):
+        """Apply command input colors from settings."""
+        self.command_input.setStyleSheet(f"""
+            QLineEdit {{
+                background-color: {self.settings['terminal_bg']};
+                color: {self.settings['terminal_fg']};
+                font-family: 'Courier New', monospace;
+                font-size: 12px;
+                border: none;
+                padding: 5px;
+            }}
+        """)
+    
+    def apply_editor_style(self):
+        """Apply editor colors from settings."""
+        self.text_area.setStyleSheet(f"""
+            QTextEdit {{
+                background-color: {self.settings['editor_bg']};
+                color: {self.settings['editor_fg']};
+            }}
+        """)
+    
+    def open_settings(self):
+        """Open settings dialog."""
+        dialog = SettingsDialog(self, self.settings)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            self.settings = dialog.settings
+            save_settings(self.settings)
+            # Apply new settings
+            self.apply_terminal_style()
+            self.apply_prompt_style()
+            self.apply_command_input_style()
+            self.apply_editor_style()
+            # Update vim mode colors in vim_mode.py
+            self.text_area.vim.normal_border_color = self.settings['vim_normal_border']
+            self.text_area.vim.insert_border_color = self.settings['vim_insert_border']
+            self.text_area.vim.editor_bg = self.settings['editor_bg']
+            self.text_area.vim.editor_fg = self.settings['editor_fg']
+            # Refresh vim indicator if enabled
+            if self.text_area.vim.enabled:
+                self.text_area.vim.update_visual_indicator()
+            self.append_terminal("Settings saved and applied.\n")
 
 def run_gui():
     app = QApplication([])
