@@ -19,7 +19,8 @@ A lightweight, customizable note management system with GUI, CLI, Vim mode, and 
 
 2. **Install dependencies**
    ```bash
-   pip install -r requirements.txt
+   chmod +x install.sh
+   ./dependencies.sh
    ```
 
 3. **Start NoteHub**
