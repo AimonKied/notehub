@@ -36,6 +36,16 @@ class CommandLineEdit(QLineEdit):
         
     def keyPressEvent(self, event: QKeyEvent):
         """Handle key press events."""
+        # Ctrl+M to toggle Vim mode in text editor
+        if event.key() == Qt.Key.Key_M and event.modifiers() & Qt.KeyboardModifier.ControlModifier:
+            # Get the parent NoteHub window and toggle vim mode
+            parent = self.parent()
+            while parent and not isinstance(parent, NoteHub):
+                parent = parent.parent()
+            if parent:
+                parent.toggle_vim_mode()
+            return
+        
         if event.key() == Qt.Key.Key_Tab:
             # Already handled in event()
             return
@@ -242,6 +252,16 @@ class NoteTextEdit(QTextEdit):
         
     def keyPressEvent(self, event: QKeyEvent):
         """Handle Enter vs Shift+Enter and Vim mode keybindings."""
+        # Ctrl+M to toggle Vim mode - always check first, regardless of current mode
+        if event.key() == Qt.Key.Key_M and event.modifiers() & Qt.KeyboardModifier.ControlModifier:
+            # Call parent's toggle_vim_mode to update button display
+            if self.parent_widget:
+                self.parent_widget.toggle_vim_mode()
+            else:
+                # Fallback if no parent
+                self.toggle_vim_mode()
+            return
+        
         # Vim mode handling
         if self.vim.enabled:
             if self.vim.current_mode == "normal":
