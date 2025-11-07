@@ -6,6 +6,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QRect, QSize
 from PyQt6.QtGui import QFont, QTextCursor, QKeyEvent, QPainter, QColor, QTextFormat
 from cli import Shell
+from vim_mode import VimMode
 
 NOTES_DIR = "notes"
 
@@ -138,12 +139,16 @@ class LineNumberArea(QWidget):
 
 class NoteTextEdit(QTextEdit):
     """Custom QTextEdit that saves on Enter and allows Shift+Enter for new lines.
-    Also supports todo checkboxes: double-click a line to toggle [ ] <-> [x]."""
+    Also supports todo checkboxes: double-click a line to toggle [ ] <-> [x].
+    Includes optional Vim mode with Normal and Insert modes."""
     
     def __init__(self, parent=None):
         super().__init__(parent)
         self.parent_widget = parent
         self.edit_mode = False  # True when in add/edit mode
+        
+        # Vim mode using separate VimMode class
+        self.vim = VimMode(self)
         
         # Line number area
         self.line_number_area = LineNumberArea(self)
@@ -153,6 +158,10 @@ class NoteTextEdit(QTextEdit):
         self.verticalScrollBar().valueChanged.connect(self.update_line_numbers)
         
         self.update_line_number_area_width()
+    
+    def toggle_vim_mode(self):
+        """Toggle Vim mode on/off."""
+        return self.vim.toggle()
         
     def mouseDoubleClickEvent(self, event):
         """Toggle todo checkbox on double-click."""
@@ -232,7 +241,27 @@ class NoteTextEdit(QTextEdit):
             block_number += 1
         
     def keyPressEvent(self, event: QKeyEvent):
-        """Handle Enter vs Shift+Enter."""
+        """Handle Enter vs Shift+Enter and Vim mode keybindings."""
+        # Vim mode handling
+        if self.vim.enabled:
+            if self.vim.current_mode == "normal":
+                # Handle normal mode keys
+                result = self.vim.handle_normal_mode_key(event)
+                # If Enter was pressed in normal mode, save
+                if result == 'save' and self.edit_mode and self.parent_widget:
+                    self.parent_widget.finish_editing()
+                return
+            elif self.vim.current_mode == "insert":
+                # ESC to exit insert mode
+                if event.key() == Qt.Key.Key_Escape:
+                    self.vim.enter_normal_mode()
+                    return
+                # In insert mode, Enter just adds a new line (no save)
+                # Normal typing and editing
+                super().keyPressEvent(event)
+                return
+        
+        # Non-Vim mode behavior
         if self.edit_mode:
             # In edit mode: Enter saves, Shift+Enter = new line
             if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
@@ -340,6 +369,17 @@ class NoteHub(QWidget):
         delete_btn = QPushButton("Delete")
         delete_btn.clicked.connect(self.delete_note)
         button_layout.addWidget(delete_btn)
+        
+        # Vim mode toggle button
+        self.vim_toggle_btn = QPushButton("Vim Mode: OFF")
+        self.vim_toggle_btn.clicked.connect(self.toggle_vim_mode)
+        self.vim_toggle_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #gray;
+                font-weight: bold;
+            }
+        """)
+        button_layout.addWidget(self.vim_toggle_btn)
 
         layout.addLayout(button_layout)
         self.setLayout(layout)
@@ -612,6 +652,34 @@ class NoteHub(QWidget):
                 if os.path.exists(filepath):
                     with open(filepath, "r", encoding="utf-8") as f:
                         self.text_area.setPlainText(f.read())
+    
+    def toggle_vim_mode(self):
+        """Toggle Vim mode in the text editor."""
+        enabled = self.text_area.toggle_vim_mode()
+        
+        # Update button text and style
+        if enabled:
+            self.vim_toggle_btn.setText("Vim Mode: ON")
+            self.vim_toggle_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #2196F3;
+                    color: white;
+                    font-weight: bold;
+                }
+            """)
+            mode_text = "NORMAL" if self.text_area.vim.current_mode == "normal" else "INSERT"
+            self.append_terminal(f"Vim mode enabled. Mode: {mode_text}\n")
+            self.append_terminal("Keys: hjkl=move, i=insert, a=append, ESC=normal, dd=delete line\n")
+            self.append_terminal("      w/b=word, 0/$=line start/end, gg/G=top/bottom, o/O=new line\n")
+        else:
+            self.vim_toggle_btn.setText("Vim Mode: OFF")
+            self.vim_toggle_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #gray;
+                    font-weight: bold;
+                }
+            """)
+            self.append_terminal("Vim mode disabled.\n")
 
 def run_gui():
     app = QApplication([])
