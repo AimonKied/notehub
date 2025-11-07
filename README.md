@@ -19,7 +19,7 @@ A lightweight, customizable note management system with GUI, CLI, Vim mode, and 
 
 2. **Install dependencies**
    ```bash
-   chmod +x install.sh
+   chmod +x dependencies.sh
    ./dependencies.sh
    ```
 
