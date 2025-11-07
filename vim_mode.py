@@ -15,8 +15,14 @@ class VimMode:
         self.enabled = False
         self.current_mode = "normal"  # "normal" or "insert"
         self.command_buffer = ""  # For multi-key commands like "dd", "gg"
-        self.last_insert_key = ""  # For "jk" escape sequence
+        self.last_insert_key = ""  # For "kj" escape sequence
         self.last_insert_time = 0  # Timestamp for last insert key
+        # Default colors (can be overridden by settings)
+        self.normal_border_color = "#2196F3"
+        self.insert_border_color = "#4CAF50"
+        # Editor background/foreground colors (set by parent)
+        self.editor_bg = "#ffffff"
+        self.editor_fg = "#000000"
         
     def toggle(self):
         """Toggle Vim mode on/off."""
@@ -35,16 +41,33 @@ class VimMode:
         """Update visual indicator of current Vim mode."""
         if self.enabled:
             if self.current_mode == "insert":
-                # Insert mode: green border, thin cursor
-                self.text_edit.setStyleSheet("QTextEdit { border: 2px solid #4CAF50; }")
+                # Insert mode: green border, thin cursor, preserve background
+                self.text_edit.setStyleSheet(f"""
+                    QTextEdit {{
+                        border: 2px solid {self.insert_border_color};
+                        background-color: {self.editor_bg};
+                        color: {self.editor_fg};
+                    }}
+                """)
                 self.text_edit.setCursorWidth(2)
             else:
-                # Normal mode: blue border, thicker block cursor
-                self.text_edit.setStyleSheet("QTextEdit { border: 2px solid #2196F3; }")
+                # Normal mode: blue border, thicker block cursor, preserve background
+                self.text_edit.setStyleSheet(f"""
+                    QTextEdit {{
+                        border: 2px solid {self.normal_border_color};
+                        background-color: {self.editor_bg};
+                        color: {self.editor_fg};
+                    }}
+                """)
                 self.text_edit.setCursorWidth(10)  # Block cursor
         else:
-            # Vim mode off: no special border
-            self.text_edit.setStyleSheet("")
+            # Vim mode off: restore original editor style
+            self.text_edit.setStyleSheet(f"""
+                QTextEdit {{
+                    background-color: {self.editor_bg};
+                    color: {self.editor_fg};
+                }}
+            """)
             self.text_edit.setCursorWidth(2)
     
     def enter_insert_mode(self, cursor=None):
