@@ -1,0 +1,11 @@
+# NoteHub Requirements
+# Python 3.6+
+
+# GUI Framework
+PyQt6>=6.0.0
+
+# Standard library modules (no installation needed):
+# - os
+# - socket
+# - datetime
+# - shutil
