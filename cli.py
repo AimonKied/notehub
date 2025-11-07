@@ -202,11 +202,70 @@ class Shell:
 
     def get_help(self) -> str:
         lines = [f"{name}\t- {meta[1]}" for name, meta in self.commands.items()]
+        lines.append("\nGUI Features:")
+        lines.append("Ctrl+M\t- Toggle Vim mode in text editor")
+        lines.append("\nFor detailed Vim keybindings, type: help vim")
         return "\n".join(lines)
 
     # ----- command handlers (return strings) -----
     def _help(self, args: List[str]) -> str:
+        # Special handling for "help vim"
+        if args and args[0].lower() == "vim":
+            return self._get_vim_help()
         return self.get_help()
+    
+    def _get_vim_help(self) -> str:
+        """Return detailed Vim mode help."""
+        help_text = """Vim Mode Keybindings
+====================
+
+Activation:
+  Ctrl+M         - Toggle Vim mode on/off (works in editor and command line)
+  Button         - Click "Vim Mode" button
+
+Visual Indicators:
+  Blue border    - Normal mode (navigation)
+  Green border   - Insert mode (editing)
+
+Movement (Normal Mode):
+  h/j/k/l        - left/down/up/right
+  w              - next word start
+  b              - previous word start
+  e              - next word end
+  0              - start of line
+  ^              - first non-blank character
+  $              - end of line
+  gg             - go to top of document
+  G              - go to bottom of document
+  Ctrl+U         - page up
+  Ctrl+D         - page down
+
+Insert Mode:
+  i              - insert before cursor
+  a              - insert after cursor
+  I              - insert at start of line
+  A              - insert at end of line
+  o              - open new line below
+  O              - open new line above
+  ESC            - return to normal mode
+
+Editing (Normal Mode):
+  x              - delete character under cursor
+  X              - delete character before cursor
+  dd             - delete current line
+  D              - delete to end of line
+  yy             - copy current line
+  p              - paste after cursor/line
+  P              - paste before cursor/line
+  cc             - change (delete and insert) current line
+  C              - change to end of line
+  u              - undo
+  Ctrl+R         - redo
+
+Saving:
+  Enter          - save and exit edit mode (Normal mode only)
+"""
+        return help_text
 
     def _exit(self, args: List[str]) -> str:
         self._running = False

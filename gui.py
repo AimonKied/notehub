@@ -395,7 +395,7 @@ class NoteHub(QWidget):
         self.vim_toggle_btn.clicked.connect(self.toggle_vim_mode)
         self.vim_toggle_btn.setStyleSheet("""
             QPushButton {
-                background-color: #gray;
+                background-color: #808080;
                 font-weight: bold;
             }
         """)
@@ -688,14 +688,12 @@ class NoteHub(QWidget):
                 }
             """)
             mode_text = "NORMAL" if self.text_area.vim.current_mode == "normal" else "INSERT"
-            self.append_terminal(f"Vim mode enabled. Mode: {mode_text}\n")
-            self.append_terminal("Keys: hjkl=move, i=insert, a=append, ESC=normal, dd=delete line\n")
-            self.append_terminal("      w/b=word, 0/$=line start/end, gg/G=top/bottom, o/O=new line\n")
+            self.append_terminal(f"Vim mode enabled. Mode: {mode_text}. Type 'help vim' for keybindings.\n")
         else:
             self.vim_toggle_btn.setText("Vim Mode: OFF")
             self.vim_toggle_btn.setStyleSheet("""
                 QPushButton {
-                    background-color: #gray;
+                    background-color: #808080;
                     font-weight: bold;
                 }
             """)
