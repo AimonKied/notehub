@@ -1,7 +1,7 @@
 # gui.py
 import os
 from PyQt6.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, QListWidget, QTextEdit, QPushButton, QHBoxLayout, QInputDialog, QMessageBox, QLineEdit, QLabel
+    QApplication, QWidget, QVBoxLayout, QListWidget, QTextEdit, QPushButton, QHBoxLayout, QInputDialog, QMessageBox, QLineEdit, QLabel, QSplitter
 )
 from PyQt6.QtCore import Qt, QRect, QSize
 from PyQt6.QtGui import QFont, QTextCursor, QKeyEvent, QPainter, QColor, QTextFormat
@@ -311,8 +311,12 @@ class NoteHub(QWidget):
         layout = QVBoxLayout()
 
         # ===== Terminal-like Command Line Section =====
+        terminal_widget = QWidget()
+        terminal_layout = QVBoxLayout()
+        terminal_layout.setContentsMargins(0, 0, 0, 0)
+        
         terminal_label = QLabel("Command Line:")
-        layout.addWidget(terminal_label)
+        terminal_layout.addWidget(terminal_label)
 
         # Text area for terminal output (read-only, monospace font, dark theme)
         self.terminal_output = QTextEdit()
@@ -326,8 +330,7 @@ class NoteHub(QWidget):
                 padding: 5px;
             }
         """)
-        self.terminal_output.setMaximumHeight(200)
-        layout.addWidget(self.terminal_output)
+        terminal_layout.addWidget(self.terminal_output)
 
         # Command input line (user types commands here)
         cmd_layout = QHBoxLayout()
@@ -360,21 +363,36 @@ class NoteHub(QWidget):
         """)
         self.command_input.returnPressed.connect(self.execute_command)
         cmd_layout.addWidget(self.command_input)
-        layout.addLayout(cmd_layout)
+        terminal_layout.addLayout(cmd_layout)
+        
+        terminal_widget.setLayout(terminal_layout)
 
         self.update_prompt()
         self.append_terminal("Welcome to NoteHub! Type 'help' to see all commands.\n")
 
         # ===== Notes Section =====
-        notes_label = QLabel("Notes:")
-        layout.addWidget(notes_label)
+        notes_widget = QWidget()
+        notes_layout = QVBoxLayout()
+        notes_layout.setContentsMargins(0, 0, 0, 0)
+        
+        # Notes list widget
+        notes_list_widget = QWidget()
+        notes_list_layout = QVBoxLayout()
+        notes_list_layout.setContentsMargins(0, 0, 0, 0)
 
         self.note_list = QListWidget()
         self.note_list.itemClicked.connect(self.load_note)
-        layout.addWidget(self.note_list)
+        notes_list_layout.addWidget(self.note_list)
+        
+        notes_list_widget.setLayout(notes_list_layout)
 
+        # Editor widget with buttons
+        editor_widget = QWidget()
+        editor_layout = QVBoxLayout()
+        editor_layout.setContentsMargins(0, 0, 0, 0)
+        
         self.text_area = NoteTextEdit(self)
-        layout.addWidget(self.text_area)
+        editor_layout.addWidget(self.text_area)
 
         button_layout = QHBoxLayout()
 
@@ -401,7 +419,29 @@ class NoteHub(QWidget):
         """)
         button_layout.addWidget(self.vim_toggle_btn)
 
-        layout.addLayout(button_layout)
+        editor_layout.addLayout(button_layout)
+        editor_widget.setLayout(editor_layout)
+
+        # Horizontal splitter for notes list and editor
+        notes_splitter = QSplitter(Qt.Orientation.Horizontal)
+        notes_splitter.addWidget(notes_list_widget)
+        notes_splitter.addWidget(editor_widget)
+        
+        # Set initial sizes (30% list, 70% editor)
+        notes_splitter.setSizes([200, 600])
+        
+        notes_layout.addWidget(notes_splitter)
+        notes_widget.setLayout(notes_layout)
+
+        # Create vertical splitter to make terminal and notes resizable
+        main_splitter = QSplitter(Qt.Orientation.Vertical)
+        main_splitter.addWidget(terminal_widget)
+        main_splitter.addWidget(notes_widget)
+        
+        # Set initial sizes (30% terminal, 70% notes)
+        main_splitter.setSizes([200, 400])
+        
+        layout.addWidget(main_splitter)
         self.setLayout(layout)
 
         self.current_note = None
