@@ -252,7 +252,7 @@ class NoteTextEdit(QTextEdit):
                 painter.setPen(QColor(100, 100, 100))  # Subtle gray text
                 painter.setFont(self.font())
                 painter.drawText(0, top, self.line_number_area.width() - 3, 
-                               self.fontMetrics().height(), 
+                                self.fontMetrics().height(), 
                                Qt.AlignmentFlag.AlignRight, number)
             
             block = block.next()
@@ -331,26 +331,26 @@ class NoteHub(QWidget):
 
         layout = QVBoxLayout()
         
-        # ===== Top bar with settings button =====
-        top_bar = QHBoxLayout()
-        top_bar.addStretch()
-        
-        settings_btn = QToolButton()
-        settings_btn.setText("⚙")  # Settings icon
-        settings_btn.setFixedSize(30, 30)
-        settings_btn.setToolTip("Settings")
-        settings_btn.clicked.connect(self.open_settings)
-        top_bar.addWidget(settings_btn)
-        
-        layout.addLayout(top_bar)
-
         # ===== Terminal-like Command Line Section =====
         terminal_widget = QWidget()
         terminal_layout = QVBoxLayout()
         terminal_layout.setContentsMargins(0, 0, 0, 0)
         
+        terminal_header_layout = QHBoxLayout()
+        
         terminal_label = QLabel("Command Line:")
-        terminal_layout.addWidget(terminal_label)
+        terminal_header_layout.addWidget(terminal_label)
+        
+        terminal_header_layout.addStretch()
+        
+        settings_btn = QToolButton()
+        settings_btn.setText("⚙")
+        settings_btn.setFixedSize(30, 30)
+        settings_btn.setToolTip("Settings")
+        settings_btn.clicked.connect(self.open_settings)
+        terminal_header_layout.addWidget(settings_btn)
+        
+        terminal_layout.addLayout(terminal_header_layout)
 
         # Text area for terminal output (read-only, monospace font, dark theme)
         self.terminal_output = QTextEdit()
@@ -755,6 +755,7 @@ class NoteHub(QWidget):
             """)
             self.append_terminal("Vim mode disabled.\n")
     
+    
     def apply_terminal_style(self):
         """Apply terminal colors from settings."""
         self.terminal_output.setStyleSheet(f"""
@@ -827,4 +828,3 @@ def run_gui():
     window = NoteHub()
     window.show()
     app.exec()
-
