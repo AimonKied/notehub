@@ -172,6 +172,15 @@ class NoteTextEdit(QTextEdit):
     def toggle_vim_mode(self):
         """Toggle Vim mode on/off."""
         return self.vim.toggle()
+    
+    def focusInEvent(self, event):
+        """When text area gets focus, activate edit mode if there's content or a note loaded."""
+        super().focusInEvent(event)
+        # Auto-activate edit mode when clicking into editor if not already in edit mode
+        if not self.edit_mode and self.parent_widget:
+            # Check if there's a note loaded
+            if self.parent_widget.current_note or self.toPlainText().strip():
+                self.edit_mode = True
         
     def mouseDoubleClickEvent(self, event):
         """Toggle todo checkbox on double-click."""
