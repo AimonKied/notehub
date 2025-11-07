@@ -1,14 +1,16 @@
 # NoteHub
 
-A lightweight note management system featuring an interactive shell interface, GUI support, and seamless email integration. Built for developers who prefer the command line but want the flexibility of a graphical interface.
+A lightweight note management system featuring an interactive shell interface, GUI support, Vim mode, and seamless email integration. Built for developers who prefer the command line but want the flexibility of a graphical interface.
 
 ## Features
 
 - 📝 GUI and CLI mode
+- ⌨️ Vim mode with full keybindings
 - 🗂️ Folder organization
 - ✅ Todo checkboxes
 - 🐚 Interactive shell
 - 📧 Email integration
+- 🔧 Resizable interface panels
 
 ## Installation
 
@@ -35,7 +37,26 @@ add, edit, remove        # Note management
 show, list, done         # View notes
 check <note> <line>      # Toggle checkbox
 email <note>             # Send via email
+help vim                 # Show Vim keybindings
 ```
+
+## Vim Mode
+
+Toggle Vim mode with **Ctrl+M** or the "Vim Mode" button.
+
+**Visual Indicators:**
+- Blue border = Normal mode (navigation)
+- Green border = Insert mode (editing)
+
+**Common Keybindings:**
+- `h/j/k/l` - Move left/down/up/right
+- `i/a/o` - Insert mode
+- `dd` - Delete line
+- `yy/p` - Copy/paste
+- `ESC` - Return to normal mode
+- `Enter` - Save (normal mode only)
+
+For complete keybinding list: `help vim`
 
 ## Email Setup
 
