@@ -22,16 +22,19 @@ A lightweight, customizable note management system with GUI, CLI, Vim mode, and 
    pip install -r requirements.txt
    ```
 
-3. **Make the installer executable and run it** (Optional - for system-wide command)
+3. **Start NoteHub**
+   
+   **Option A:** Install system-wide (recommended)
    ```bash
    chmod +x install.sh
    ./install.sh
+   notehub
    ```
-
-Or run directly:
-```bash
-python3 main.py
-```
+   
+   **Option B:** Run directly without installation
+   ```bash
+   python3 main.py
+   ```
 
 That's it! NoteHub will open in GUI mode.
 
