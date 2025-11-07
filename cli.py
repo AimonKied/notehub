@@ -1,8 +1,6 @@
-
 # cli.py
 import os
 import argparse
-import readline
 import shlex
 import socket
 from typing import List
@@ -142,7 +140,6 @@ def email_note(title):
 
 class Shell:
     """A simple in-app shell with a Bash-like prompt.
-
     Exposes non-interactive methods for testing and an interactive
     loop that uses readline for line editing and history.
     """
@@ -540,12 +537,17 @@ Saving:
     def interactive(self):
         """Start the interactive shell loop (uses readline)."""
         self._running = True
-        # enable simple history across sessions
+        histfile = os.path.expanduser("~/.notehub_history")
+        readline = None 
+
         try:
-            histfile = os.path.expanduser("~/.notehub_history")
-            readline.read_history_file(histfile)
+            import readline
+            if os.path.exists(histfile):
+                readline.read_history_file(histfile)
+        except ImportError:
+            pass 
         except Exception:
-            pass
+            pass 
 
         try:
             while self._running:
@@ -556,16 +558,16 @@ Saving:
                     break
                 out = self.run_command(line)
                 if out:
-                    # allow "+clear+" to actually clear by printing control
                     if out == "\x1bc":
                         print(out, end="")
                     else:
                         print(out)
         finally:
-            try:
-                readline.write_history_file(histfile)
-            except Exception:
-                pass
+            if readline:
+                try:
+                    readline.write_history_file(histfile)
+                except Exception:
+                    pass
 
 
 def handle_cli(args):
@@ -601,4 +603,3 @@ def handle_cli(args):
         shell.interactive()
     else:
         parser.print_help()
-
