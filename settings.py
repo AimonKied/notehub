@@ -8,12 +8,12 @@ from PyQt6.QtGui import QColor
 
 SETTINGS_FILE = "notehub_settings.json"
 DEFAULT_SETTINGS = {
-    "terminal_bg": "#1e1e1e",
-    "terminal_fg": "#00ff00",
+    "terminal_bg": "#1E1E1E",
+    "terminal_fg": "#00FF00",
     "vim_normal_border": "#2196F3",
     "vim_insert_border": "#4CAF50",
-    "editor_bg": "#ffffff",
-    "editor_fg": "#000000"
+    "editor_bg": "#1E1E1E",
+    "editor_fg": "#FFFFFF"
 }
 
 
