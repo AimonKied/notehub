@@ -162,7 +162,7 @@ class Shell:
             "edit": (self._edit, "Edit a note: edit <title>"),
             "remove": (self._remove, "Delete a note or folder: remove <title> | remove -d <folder>"),
             "done": (self._done, "Mark a note as done: done <title>"),
-            "check": (self._check, "Toggle todo checkbox: check <title> <line_number>"),
+            "check": (self._check, "Toggle todo checkbox: check <title> <line_number> [line_number2 ...]"),
             "show": (self._show, "Show note content: show <title>"),
             "list": (self._list, "List notes in current directory"),
             "mkdir": (self._mkdir, "Create a directory: mkdir <name>"),
@@ -428,10 +428,10 @@ Saving:
 
     def _check(self, args: List[str]) -> str:
         if len(args) < 2:
-            return "Usage: check <title> <line_number>"
+            return "Usage: check <title> <line_number> [line_number2 ...]"
         try:
             title = args[0]
-            line_num = int(args[1])
+            line_numbers = [int(arg) for arg in args[1:]]
             filename = os.path.join(self.cwd, f"{title}.txt")
             
             if not os.path.exists(filename):
@@ -440,30 +440,38 @@ Saving:
             with open(filename, "r", encoding="utf-8") as f:
                 lines = f.readlines()
             
-            if line_num < 1 or line_num > len(lines):
-                return f"Line {line_num} out of range (1-{len(lines)})."
+            results = []
+            modified = False
             
-            # Line numbers are 1-based, array is 0-based
-            line_idx = line_num - 1
-            line = lines[line_idx]
+            for line_num in line_numbers:
+                if line_num < 1 or line_num > len(lines):
+                    results.append(f"Line {line_num} out of range (1-{len(lines)})")
+                    continue
+                
+                # Line numbers are 1-based, array is 0-based
+                line_idx = line_num - 1
+                line = lines[line_idx]
+                
+                # Toggle checkbox
+                if "[ ]" in line:
+                    lines[line_idx] = line.replace("[ ]", "[x]", 1)
+                    results.append(f"Line {line_num} checked")
+                    modified = True
+                elif "[x]" in line:
+                    lines[line_idx] = line.replace("[x]", "[ ]", 1)
+                    results.append(f"Line {line_num} unchecked")
+                    modified = True
+                else:
+                    results.append(f"Line {line_num} is not a todo item (missing [ ] or [x])")
             
-            # Toggle checkbox
-            if "[ ]" in line:
-                lines[line_idx] = line.replace("[ ]", "[x]", 1)
-                status = "checked"
-            elif "[x]" in line:
-                lines[line_idx] = line.replace("[x]", "[ ]", 1)
-                status = "unchecked"
-            else:
-                return f"Line {line_num} is not a todo item (missing [ ] or [x])."
+            # Write back if any changes were made
+            if modified:
+                with open(filename, "w", encoding="utf-8") as f:
+                    f.writelines(lines)
             
-            # Write back
-            with open(filename, "w", encoding="utf-8") as f:
-                f.writelines(lines)
-            
-            return f"Line {line_num} in '{title}' {status}."
+            return "\n".join(results)
         except ValueError:
-            return "Line number must be an integer."
+            return "All line numbers must be integers."
         except Exception as e:
             return str(e)
 
