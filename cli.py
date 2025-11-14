@@ -58,10 +58,14 @@ def mark_note_done(title):
         return f"Note '{title}' not found."
 
 
-def email_note(title):
-    """Send a specific note via email using notehub-email."""
+def email_note(title, to_email: str = None):
+    """Send a specific note via email using notehub-email.
+
+    If `to_email` is provided it overrides the TO_EMAIL value from the
+    notehub-email/.env configuration.
+    """
     ensure_notes_dir()
-    
+
     # Find the note file
     note_path = None
     for root, dirs, files in os.walk(NOTES_DIR):
@@ -71,67 +75,75 @@ def email_note(title):
                 break
         if note_path:
             break
-    
+
     if not note_path:
         return f"Note '{title}' not found."
-    
+
     # Path to notehub-email directory
     email_script_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "notehub-email")
     email_script = os.path.join(email_script_dir, "send_note.py")
-    
+
     if not os.path.exists(email_script):
         return f"Error: Email sender not found at {email_script}"
-    
+
     # Import the email functions
     import sys
     sys.path.insert(0, email_script_dir)
-    
+
     try:
         from send_note import load_env, read_note, send_email
-        
+
         # Load environment variables
         env = load_env()
-        
-        required_vars = ['FROM_EMAIL', 'TO_EMAIL', 'EMAIL_PASSWORD']
+
+        # Require FROM_EMAIL and EMAIL_PASSWORD; TO_EMAIL is optional here
+        # because a recipient may be provided directly to this function.
+        required_vars = ["FROM_EMAIL", "EMAIL_PASSWORD"]
         missing_vars = [var for var in required_vars if not env.get(var)]
-        
+
         if missing_vars:
             return f"Error: Missing email configuration: {', '.join(missing_vars)}\nPlease configure notehub-email/.env file."
-        
+
         # Read note content
         content = read_note(note_path)
         if not content:
             return f"Error: Could not read note '{title}'."
-        
+
         # Get configuration
-        from_email = env['FROM_EMAIL']
-        to_email = env['TO_EMAIL']
-        password = env['EMAIL_PASSWORD']
-        smtp_server = env.get('SMTP_SERVER', 'smtp.gmail.com')
-        smtp_port = int(env.get('SMTP_PORT', '587'))
-        smtp_username = env.get('SMTP_USERNAME')
-        
+        from_email = env["FROM_EMAIL"]
+        password = env["EMAIL_PASSWORD"]
+        env_to_email = env.get("TO_EMAIL")
+
+        # Resolve final recipient: prefer function argument, then env
+        final_to_email = to_email if to_email else env_to_email
+        if not final_to_email:
+            return "Error: No recipient specified. Provide TO_EMAIL in notehub-email/.env or pass an email address to send."
+
+        smtp_server = env.get("SMTP_SERVER", "smtp.gmail.com")
+        smtp_port = int(env.get("SMTP_PORT", "587"))
+        smtp_username = env.get("SMTP_USERNAME")
+
         # Prepare subject
         subject = f"Notehub Note: {title}"
-        
+
         # Send email
-        print(f"📧 Sending note '{title}' to {to_email}...")
+        print(f"📧 Sending note '{title}' to {final_to_email}...")
         success = send_email(
             subject=subject,
             body=content,
             from_email=from_email,
-            to_email=to_email,
+            to_email=final_to_email,
             password=password,
             smtp_server=smtp_server,
             smtp_port=smtp_port,
-            username=smtp_username
+            username=smtp_username,
         )
-        
+
         if success:
-            return f"✅ Note '{title}' sent successfully to {to_email}"
+            return f"✅ Note '{title}' sent successfully to {final_to_email}"
         else:
             return f"❌ Failed to send note '{title}'"
-            
+
     except ImportError as e:
         return f"Error: Could not import email sender: {e}"
     except Exception as e:
@@ -167,7 +179,7 @@ class Shell:
             "list": (self._list, "List notes in current directory"),
             "mkdir": (self._mkdir, "Create a directory: mkdir <name>"),
             "clear": (self._clear, "Clear the console"),
-            "send": (self._send, "Send a note via email: email <title>"),
+            "send": (self._send, "Send a note via email: send <title> [to_email]"),
         }
         self._running = False
 
@@ -505,19 +517,20 @@ Saving:
 
     def _send(self, args: List[str]) -> str:
         if not args:
-            return "Usage: email <title>"
+            return "Usage: send <title> [to_email]"
         try:
             title = args[0]
+            to_email = args[1] if len(args) > 1 else None
+
             # Get the absolute path relative to sandbox root
             filename = os.path.join(self.cwd, f"{title}.txt")
-            
+
             # Check if note exists
             if not os.path.exists(filename):
                 return f"Note '{title}' not found."
-            
-            # Call the email_note function with just the title
-            # The function will search for it in the notes directory
-            return email_note(title)
+
+            # Call the email_note function with optional recipient
+            return email_note(title, to_email)
         except Exception as e:
             return f"Error: {e}"
 
@@ -592,6 +605,7 @@ def handle_cli(args):
 
     email_parser = subparsers.add_parser("email", help="Send a note via email")
     email_parser.add_argument("title")
+    email_parser.add_argument("to_email", nargs="?", help="Optional recipient email address")
 
     subparsers.add_parser("list")
     subparsers.add_parser("shell", help="Start interactive shell")
@@ -603,7 +617,9 @@ def handle_cli(args):
     elif parsed.command == "remove":
         print(remove_note(parsed.title))
     elif parsed.command == "email":
-        print(email_note(parsed.title))
+        # Pass optional recipient through to the email sender
+        to_addr = getattr(parsed, "to_email", None)
+        print(email_note(parsed.title, to_addr))
     elif parsed.command == "list":
         print(list_notes())
     elif parsed.command == "shell":
