@@ -31,7 +31,7 @@ EOF
 # Update desktop database
 if command -v update-desktop-database &> /dev/null; then
     update-desktop-database ~/.local/share/applications
-f
+fi
 
 echo "✓ NoteHub installed successfully!"
 echo ""
